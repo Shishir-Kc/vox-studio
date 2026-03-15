@@ -50,7 +50,8 @@ class NotificationToast extends StatefulWidget {
   State<NotificationToast> createState() => _NotificationToastState();
 }
 
-class _NotificationToastState extends State<NotificationToast> with SingleTickerProviderStateMixin {
+class _NotificationToastState extends State<NotificationToast>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _offsetAnimation;
   late Animation<double> _fadeAnimation;
@@ -66,15 +67,9 @@ class _NotificationToastState extends State<NotificationToast> with SingleTicker
     _offsetAnimation = Tween<Offset>(
       begin: const Offset(1.0, 0.0),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutBack,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeIn,
-    );
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 
     _controller.forward();
   }
@@ -104,20 +99,20 @@ class _NotificationToastState extends State<NotificationToast> with SingleTicker
                 width: 320,
                 padding: const EdgeInsets.all(16.0),
                 decoration: BoxDecoration(
-                  color: isDark 
-                      ? const Color(0xFF1E1E1E).withOpacity(0.85) 
-                      : Colors.white.withOpacity(0.9),
+                  color: isDark
+                      ? const Color(0xFF1E1E1E).withValues(alpha: 0.85)
+                      : Colors.white.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(16.0),
                   border: Border.all(
-                    color: primaryColor.withOpacity(0.4),
+                    color: primaryColor.withValues(alpha: 0.4),
                     width: 1.0,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
-                    )
+                    ),
                   ],
                 ),
                 child: Row(
@@ -127,7 +122,7 @@ class _NotificationToastState extends State<NotificationToast> with SingleTicker
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.15),
+                        color: primaryColor.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -149,7 +144,9 @@ class _NotificationToastState extends State<NotificationToast> with SingleTicker
                               Text(
                                 widget.title.toUpperCase(),
                                 style: GoogleFonts.jetBrainsMono(
-                                  color: isDark ? Colors.white60 : Colors.black54,
+                                  color: isDark
+                                      ? Colors.white60
+                                      : Colors.black54,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.2,
@@ -160,9 +157,11 @@ class _NotificationToastState extends State<NotificationToast> with SingleTicker
                                 child: Icon(
                                   Icons.close,
                                   size: 16,
-                                  color: isDark ? Colors.white38 : Colors.black38,
+                                  color: isDark
+                                      ? Colors.white38
+                                      : Colors.black38,
                                 ),
-                              )
+                              ),
                             ],
                           ),
                           const SizedBox(height: 4),
