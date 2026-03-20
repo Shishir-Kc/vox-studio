@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# AppImage build artifacts
+appimagetool
+the_blog.AppDir/

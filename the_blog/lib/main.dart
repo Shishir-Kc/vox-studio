@@ -97,6 +97,7 @@ class _MarkdownEditorPageState extends State<MarkdownEditorPage>
   String? _apiKey;
   String? _apiUrl;
   bool _isValidating = false;
+  bool _isCheckingSpelling = false;
 
   late AnimationController _animationController;
   late Animation<double> _slideAnimation;
@@ -376,6 +377,161 @@ class _MarkdownEditorPageState extends State<MarkdownEditorPage>
       );
       debugPrint("Request Exception: $e");
     }
+  }
+
+  Future<void> _checkSpelling() async {
+    if (_controller.text.trim().isEmpty) {
+      NotificationManager.show(
+        context,
+        "Check",
+        "Nothing to check. Start typing first.",
+      );
+      return;
+    }
+
+    if (_apiUrl == null || _apiUrl!.isEmpty) {
+      NotificationManager.show(
+        context,
+        "Error",
+        "No API URL set. Connect first.",
+      );
+      return;
+    }
+
+    if (_apiKey == null || _apiKey!.isEmpty) {
+      NotificationManager.show(
+        context,
+        "Error",
+        "No API key set. Connect first.",
+      );
+      return;
+    }
+
+    setState(() => _isCheckingSpelling = true);
+
+    try {
+      final response = await http
+          .post(
+            Uri.parse('${_apiUrl!}/api/v1/check/spelling'),
+            headers: {
+              "Content-Type": "application/json",
+              "X-API-KEY": _apiKey!,
+            },
+            body: jsonEncode({"content": _controller.text}),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final bool changed = data['Changed'] ?? false;
+        final String? correctedContent = data['Content'];
+
+        if (changed && correctedContent != null) {
+          _showSpellingDialog(correctedContent);
+        } else {
+          NotificationManager.show(
+            context,
+            "Spelling Check",
+            "No spelling issues found.",
+          );
+        }
+      } else {
+        NotificationManager.show(
+          context,
+          "Error",
+          "Spelling check failed: ${response.statusCode}",
+        );
+        debugPrint("Spelling API Error: ${response.body}");
+      }
+    } catch (e) {
+      if (!mounted) return;
+      NotificationManager.show(
+        context,
+        "Error",
+        "Connection failed. Check if the spelling API is running.",
+      );
+      debugPrint("Spelling Check Exception: $e");
+    } finally {
+      if (mounted) setState(() => _isCheckingSpelling = false);
+    }
+  }
+
+  void _showSpellingDialog(String correctedContent) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.spellcheck, color: primaryColor, size: 22),
+              const SizedBox(width: 10),
+              Text(
+                "Spelling Corrections",
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 500,
+            child: SingleChildScrollView(
+              child: SelectableText(
+                correctedContent,
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 14,
+                  height: 1.6,
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                "Cancel",
+                style: GoogleFonts.outfit(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _controller.text = correctedContent;
+                  _markdownText = correctedContent;
+                });
+                Navigator.pop(context);
+                NotificationManager.show(
+                  context,
+                  "Done",
+                  "Content replaced with corrections.",
+                );
+              },
+              icon: const Icon(Icons.check, size: 18),
+              label: Text("Replace", style: GoogleFonts.outfit()),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: isDark ? Colors.black : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showConnectDialog() {
@@ -743,6 +899,47 @@ class _MarkdownEditorPageState extends State<MarkdownEditorPage>
               isDark,
             ),
             _buildToolbarButton(Icons.format_quote, "> ", "", "Quote", isDark),
+            Container(
+              width: 1,
+              height: 20,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              color: isDark ? Colors.grey[700] : Colors.grey[300],
+            ),
+            _isCheckingSpelling
+                ? SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: primaryColor,
+                      ),
+                    ),
+                  )
+                : TextButton.icon(
+                    onPressed: _checkSpelling,
+                    icon: Icon(Icons.spellcheck, size: 16, color: primaryColor),
+                    label: Text(
+                      "Check",
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: primaryColor,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ),
           ],
         ),
       ),
