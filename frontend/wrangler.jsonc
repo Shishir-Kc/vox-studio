@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vox-studio",
+  "compatibility_date": "2026-04-24",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "vox"
+  },
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
+}
