@@ -16,7 +16,7 @@ app.use(
 )
 
 app.get('/', (c) => {
-  return c.text('Hello Hono!')
+  return c.text('Hello USER')
 })
 app.route("/vox", read)
 app.route('/vox/upload', upload)
