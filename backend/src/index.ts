@@ -8,9 +8,9 @@ const app = new Hono()
 app.use(
   '*',
   cors({
-    origin: '*', // Match your frontend URL here!
+    origin: ['shishirkhatri.com.np', 'blog.shishirkhatri.com.np'], // Match your frontend URL here!
     allowHeaders: ['Content-Type', 'Authorization'],
-    allowMethods: ['POST', 'GET', 'OPTIONS', 'PUT', 'DELETE'],
+    allowMethods: ['GET'],
     credentials: true,
   })
 )
