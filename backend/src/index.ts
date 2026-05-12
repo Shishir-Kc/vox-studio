@@ -6,15 +6,13 @@ import { cors } from 'hono/cors'
 const app = new Hono()
 
 app.use(
-  '*',
   cors({
-    origin: ['shishirkhatri.com.np', 'blog.shishirkhatri.com.np'], // Match your frontend URL here!
-    allowHeaders: ['Content-Type', 'Authorization'],
-    allowMethods: ['GET'],
+    origin: ['https://shishirkhatri.com.np', 'https://blog.shishirkhatri.com.np', 'http://localhost:5173'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-API-KEY'],
+    allowMethods: ['GET', 'POST'],
     credentials: true,
   })
 )
-
 app.get('/', (c) => {
   return c.text('Hello USER')
 })

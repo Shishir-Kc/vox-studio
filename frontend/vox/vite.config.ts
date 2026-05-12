@@ -11,4 +11,12 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/vox': {
+        target: 'http://localhost:8787',
+        changeOrigin: true,
+      }
+    }
+  }
 })

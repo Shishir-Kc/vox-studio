@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Upload, FileText, BookOpen, Send, Sparkles, Clock, Calendar, Hash, ArrowRight, Zap, Shield, HelpCircle, Settings, X } from 'lucide-react'
+import { Upload, FileText, BookOpen, Send, Clock, Calendar, Hash, ArrowRight, Zap, Shield, HelpCircle, Settings, X } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
@@ -12,7 +12,6 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
 
 type Page = 'upload' | 'posts' | 'documentation' | 'settings'
@@ -29,59 +28,13 @@ interface Post {
   featured: boolean
 }
 
-const samplePosts: Post[] = [
-  {
-    id: '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d',
-    slug: 'understanding-color-pure-black-charcoal',
-    title: 'Understanding Color: From Pure Black to Charcoal',
-    excerpt: 'Explore the subtle differences between black shades and when to use each.',
-    content: 'Black is never just black. Our color scheme ranges from #000000 Pure Black to #424242 Charcoal, each with its own personality...',
-    date: '2026-04-24T10:00:00Z',
-    category: 'Design',
-    readingTime: '5 min read',
-    featured: true
-  },
-  {
-    id: '2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e',
-    slug: 'building-dark-mode-interfaces',
-    title: 'Building Dark Mode Interfaces',
-    excerpt: 'A comprehensive guide to creating beautiful dark mode UIs.',
-    content: 'Dark mode is more than inverting colors. It requires careful consideration of contrast, hierarchy, and visual depth...',
-    date: '2026-04-23T14:30:00Z',
-    category: 'Tutorial',
-    readingTime: '8 min read',
-    featured: true
-  },
-  {
-    id: '3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f',
-    slug: 'art-of-minimal-design',
-    title: 'The Art of Minimal Design',
-    excerpt: 'Less is more. How to achieve more with fewer elements.',
-    content: 'Minimalism isn\'t about removing elements it\'s about purposefully including only what matters...',
-    date: '2026-04-22T09:15:00Z',
-    category: 'Design',
-    readingTime: '4 min read',
-    featured: false
-  },
-  {
-    id: '4d5e6f7a-8b9c-0d1e-2f3a-4b5c6d7e8f9a',
-    slug: 'react-best-practices-2026',
-    title: 'React Best Practices 2026',
-    excerpt: 'Modern patterns and techniques for building better React apps.',
-    content: 'From Server Components to the latest hooks patterns, here\'s what\'s trending in React development...',
-    date: '2026-04-21T16:45:00Z',
-    category: 'Tech',
-    readingTime: '6 min read',
-    featured: false
-  }
-]
-
 export default function App() {
   const [activePage, setActivePage] = useState<Page>('upload')
-  const [posts, setPosts] = useState<Post[]>(samplePosts)
+  const [posts, setPosts] = useState<Post[]>([])
   const [content, setContent] = useState('')
   const [isPublishing, setIsPublishing] = useState(false)
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false)
+  const [isLoadingPosts, setIsLoadingPosts] = useState(false)
   const [publishForm, setPublishForm] = useState({
     slug: '',
     title: '',
@@ -92,8 +45,62 @@ export default function App() {
   })
   
   // Settings State
-  const [apiKey, setApiKey] = useState('')
-  const [apiEndpoint, setApiEndpoint] = useState('')
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('vox_api_key') || '')
+  const [apiEndpoint, setApiEndpoint] = useState(() => 
+    localStorage.getItem('vox_api_endpoint') || import.meta.env.VITE_API_URL || ''
+  )
+
+  useEffect(() => {
+    if (apiEndpoint) {
+      localStorage.setItem('vox_api_endpoint', apiEndpoint)
+    } else {
+      localStorage.removeItem('vox_api_endpoint')
+    }
+  }, [apiEndpoint])
+
+  useEffect(() => {
+    if (apiKey) {
+      localStorage.setItem('vox_api_key', apiKey)
+    } else {
+      localStorage.removeItem('vox_api_key')
+    }
+  }, [apiKey])
+
+  const getApiUrl = (path: string) => {
+    const base = apiEndpoint || import.meta.env.VITE_API_URL || ''
+    return `${base}${path}`
+  }
+
+  const fetchPosts = async () => {
+    setIsLoadingPosts(true)
+    try {
+      const url = getApiUrl('/vox/posts')
+      const headers: Record<string, string> = {}
+      
+      if (apiKey) {
+        headers['X-API-KEY'] = apiKey
+      }
+
+      const response = await fetch(url, { headers })
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch posts')
+      }
+
+      const data = await response.json()
+      setPosts(data)
+    } catch (error) {
+      console.error('Error fetching posts:', error)
+    } finally {
+      setIsLoadingPosts(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activePage === 'posts') {
+      fetchPosts()
+    }
+  }, [activePage, apiEndpoint, apiKey])
 
   const navItems = [
     { key: 'upload', label: 'Studio', icon: Upload, description: 'Create and edit your stories' },
@@ -119,11 +126,20 @@ export default function App() {
     setIsPublishing(true)
     
     try {
-      const response = await fetch('http://localhost:8787/vox/upload/post', {
+      const endpoint = apiEndpoint || import.meta.env.VITE_API_URL || ''
+      const url = `${endpoint}/vox/upload/post`
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      }
+      
+      if (apiKey) {
+        headers['X-API-KEY'] = apiKey
+      }
+      
+      const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify({
           title: publishForm.title,
           content: content,
@@ -327,60 +343,67 @@ export default function App() {
               exit="exit"
               className="space-y-8"
             >
-              <div className="flex items-center justify-between mb-12">
-                <div>
-                  <h2 className="text-3xl font-bold tracking-tight mb-2">Content Library</h2>
-                  <p className="text-[var(--color-dim-gray)]">Showing all {posts.length} entries</p>
+              {isLoadingPosts ? (
+                <div className="text-center py-12">
+                  <Spinner className="w-8 h-8 mx-auto mb-4" />
+                  <p className="text-[var(--color-dim-gray)]">Loading posts...</p>
                 </div>
-              </div>
+              ) : posts.length === 0 ? (
+                <div className="text-center py-12">
+                  <FileText className="w-16 h-16 text-[var(--color-raisin-black)] mx-auto mb-6" />
+                  <h3 className="text-xl font-medium mb-3">No posts yet</h3>
+                  <p className="text-[var(--color-dim-gray)] max-w-md mx-auto">
+                    Create your first post in the Studio to see it here.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <AnimatePresence>
+                    {posts.map((post, i) => (
+                      <motion.article
+                        key={post.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, delay: i * 0.05 }}
+                        whileHover={{ scale: 1.01, y: -4 }}
+                        className="group bg-[var(--color-jet-black)] border border-[var(--color-eerie-black)] rounded-3xl p-8 hover:border-[var(--color-raisin-black)] transition-all cursor-pointer shadow-lg hover:shadow-2xl hover:shadow-[var(--color-charcoal)]/5 flex flex-col h-full relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                           <ArrowRight className="w-6 h-6 text-[var(--color-dim-gray)] group-hover:text-white transition-colors" />
+                        </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <AnimatePresence>
-                  {posts.map((post, i) => (
-                    <motion.article
-                      key={post.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.4, delay: i * 0.05 }}
-                      whileHover={{ scale: 1.01, y: -4 }}
-                      className="group bg-[var(--color-jet-black)] border border-[var(--color-eerie-black)] rounded-3xl p-8 hover:border-[var(--color-raisin-black)] transition-all cursor-pointer shadow-lg hover:shadow-2xl hover:shadow-[var(--color-charcoal)]/5 flex flex-col h-full relative overflow-hidden"
-                    >
-                      <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                         <ArrowRight className="w-6 h-6 text-[var(--color-dim-gray)] group-hover:text-white transition-colors" />
-                      </div>
-
-                      <div className="flex items-center gap-3 mb-6">
-                        <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-rich-black)] px-3 py-1.5 rounded-full border border-[var(--color-eerie-black)]">
-                          <Hash className="w-3.5 h-3.5" />
-                          {post.category}
-                        </span>
-                        {post.featured && (
-                          <span className="flex items-center gap-1.5 text-xs font-medium text-amber-500/90 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
-                            <Sparkles className="w-3.5 h-3.5" />
-                            Featured
+                        <div className="flex items-center gap-3 mb-6">
+                          <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-rich-black)] px-3 py-1.5 rounded-full border border-[var(--color-eerie-black)]">
+                            <Hash className="w-3.5 h-3.5" />
+                            {post.category}
                           </span>
-                        )}
-                      </div>
-                      
-                      <h3 className="text-2xl font-semibold mb-4 pr-8 line-clamp-2 leading-tight group-hover:text-white transition-colors">{post.title}</h3>
-                      <p className="text-[var(--color-dim-gray)] leading-relaxed mb-8 flex-1 line-clamp-3">
-                        {post.excerpt}
-                      </p>
-                      
-                      <div className="flex items-center gap-6 text-sm text-[var(--color-dim-gray)] border-t border-[var(--color-eerie-black)] pt-6 mt-auto">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          {new Date(post.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {post.featured && (
+                            <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-rich-black)] bg-white px-3 py-1.5 rounded-full border border-white">
+                              Featured
+                            </span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4" />
-                          {post.readingTime}
+                        
+                        <h3 className="text-2xl font-semibold mb-4 pr-8 line-clamp-2 leading-tight group-hover:text-white transition-colors">{post.title}</h3>
+                        <p className="text-[var(--color-dim-gray)] leading-relaxed mb-8 flex-1 line-clamp-3">
+                          {post.excerpt}
+                        </p>
+                        
+                        <div className="flex items-center gap-6 text-sm text-[var(--color-dim-gray)] border-t border-[var(--color-eerie-black)] pt-6 mt-auto">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            {new Date(post.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            {post.readingTime}
+                          </div>
                         </div>
-                      </div>
-                    </motion.article>
-                  ))}
-                </AnimatePresence>
-              </div>
+                      </motion.article>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -441,6 +464,7 @@ export default function App() {
                       onChange={(e) => setApiEndpoint(e.target.value)}
                       className="w-full bg-[var(--color-rich-black)] border border-[var(--color-eerie-black)] rounded-xl px-4 py-3 text-white placeholder-[var(--color-dim-gray)] focus:outline-none focus:border-[var(--color-charcoal)] transition-colors"
                     />
+                    <p className="text-xs text-[var(--color-dim-gray)]">Settings are automatically saved</p>
                   </div>
                   
                   <div className="space-y-2">
@@ -456,10 +480,15 @@ export default function App() {
                     />
                   </div>
 
-                  <div className="pt-4 flex justify-end">
-                    <button className="flex items-center gap-2 bg-white text-[var(--color-rich-black)] px-6 py-2.5 rounded-xl font-medium transition-all hover:bg-gray-100 hover:scale-[1.02] active:scale-[0.98]">
-                      <Settings className="w-4 h-4" />
-                      Save Configuration
+                  <div className="pt-4 flex justify-end gap-3">
+                    <button 
+                      onClick={() => {
+                        setApiEndpoint(import.meta.env.VITE_API_URL || '')
+                        setApiKey('')
+                      }}
+                      className="px-5 py-2.5 rounded-xl font-medium text-[var(--color-dim-gray)] hover:text-white transition-colors"
+                    >
+                      Reset to Default
                     </button>
                   </div>
                 </div>
