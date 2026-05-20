@@ -5,7 +5,7 @@ Vox Studio is a small, focused full-stack project organized as a monorepo with a
 Key components:
 - Frontend (frontend/vox): React + TypeScript app built with Vite. Serves the UI assets via a Cloudflare Worker and communicates with the backend API.
 - Backend (backend): Cloudflare Worker with Hono, backed by Supabase for persistent storage. Exposes endpoints for reading and uploading posts.
-- Wrangler: Used to run and deploy the Cloudflare Workers locally and to production.
+- Wrangler: Used to run and deploy the Cloudflare Workers locally and in production.
 - Shared configuration: wrangler.jsonc files at frontend and backend configure the build/deploy process; the frontend serves static assets from the Vox app, while the backend handles API endpoints.
 
 Project structure
