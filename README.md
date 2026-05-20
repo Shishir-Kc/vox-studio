@@ -37,6 +37,12 @@ How the architecture fits together
   - POST /vox/upload/post accepts a JSON payload to create a new post, validated against a Zod schema, and stores it in the database.
 - Wrangler is used to run and deploy both frontend and backend as Cloudflare Workers. The frontend serves assets from vox/dist; the backend serves API routes under the Vox namespace.
 
+Architecture at a glance
+- Backend: Cloudflare Workers (Hono) with a Supabase database; Exposes GET /vox/posts and POST /vox/upload/post (requires X-API-KEY). Routes mounted under /vox in backend/src/index.ts.
+- Frontend: React + TypeScript UI built with Vite (frontend/vox); Serves UI assets via worker and consumes backend API; VITE_API_URL configures base API URL.
+- Wrangler: Used to run and deploy both frontend and backend locally and in production.
+- Local development: npm run start:dev boots both frontend and backend and streams logs.
+
 API surface (backend)
 - GET /vox/posts
   - Returns a list of posts from the database.
