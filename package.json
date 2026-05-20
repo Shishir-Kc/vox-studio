@@ -1,0 +1,7 @@
+{
+  "name": "vox-studio",
+  "private": true,
+  "scripts": {
+    "start:dev": "bash scripts/start-dev.sh"
+  }
+}
