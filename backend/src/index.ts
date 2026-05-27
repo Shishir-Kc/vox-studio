@@ -7,7 +7,7 @@ const app = new Hono()
 
 app.use(
   cors({
-    origin: ['https://shishirkhatri.com.np', 'https://blog.shishirkhatri.com.np', 'http://localhost:5173', 'vox.shishirkhatri.com.np'],
+    origin: ['https://shishirkhatri.com.np', 'https://blog.shishirkhatri.com.np', 'http://localhost:5173', 'https://vox.shishirkhatri.com.np'],
     allowHeaders: ['Content-Type', 'Authorization', 'X-API-KEY'],
     allowMethods: ['GET', 'POST'],
     credentials: true,
