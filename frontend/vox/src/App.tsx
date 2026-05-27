@@ -118,7 +118,10 @@ export default function App() {
       }
 
       const data = await response.json()
-      setPosts(data)
+      const sortedData = data.sort((a: Post, b: Post) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      )
+      setPosts(sortedData)
     } catch (error) {
       console.error('Error fetching posts:', error)
     } finally {
