@@ -1,17 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Upload, FileText, BookOpen, Send, Clock, Calendar, Hash, ArrowRight, Zap, Shield, HelpCircle, Settings, X } from 'lucide-react'
+import { Upload, FileText, Send, Clock, Calendar, Hash, ArrowRight, Settings, X } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import { Spinner } from "@/components/ui/spinner"
 import {
   NavigationMenu,
-  NavigationMenuContent,
+
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-  NavigationMenuTrigger,
+
 } from "@/components/ui/navigation-menu"
 
 type Page = 'upload' | 'posts' | 'settings'
