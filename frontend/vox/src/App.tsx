@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, FileText, BookOpen, Send, Clock, Calendar, Hash, ArrowRight, Zap, Shield, HelpCircle, Settings, X } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
@@ -14,7 +14,7 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu"
 
-type Page = 'upload' | 'posts' | 'documentation' | 'settings'
+type Page = 'upload' | 'posts' | 'settings'
 
 interface Post {
   id: string
@@ -34,7 +34,9 @@ export default function App() {
   const [content, setContent] = useState('')
   const [isPublishing, setIsPublishing] = useState(false)
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false)
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false)
   const [isLoadingPosts, setIsLoadingPosts] = useState(false)
+  const editorRef = useRef<HTMLTextAreaElement>(null)
   const [publishForm, setPublishForm] = useState({
     slug: '',
     title: '',
@@ -65,6 +67,38 @@ export default function App() {
       localStorage.removeItem('vox_api_key')
     }
   }, [apiKey])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === '.') {
+        e.preventDefault()
+        setIsShortcutsOpen(prev => !prev)
+      }
+      if (isShortcutsOpen && e.key === 'Escape') {
+        setIsShortcutsOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isShortcutsOpen])
+
+  const insertText = (text: string, cursorOffset: number = 0) => {
+    const editor = editorRef.current
+    if (!editor) return
+
+    const start = editor.selectionStart
+    const end = editor.selectionEnd
+    const newValue = content.substring(0, start) + text + content.substring(end)
+    
+    setContent(newValue)
+
+    // Set focus back and position cursor
+    setTimeout(() => {
+      editor.focus()
+      const newPos = start + cursorOffset
+      editor.setSelectionRange(newPos, newPos)
+    }, 0)
+  }
 
   const getApiUrl = (path: string) => {
     const base = apiEndpoint || import.meta.env.VITE_API_URL || ''
@@ -105,7 +139,6 @@ export default function App() {
   const navItems = [
     { key: 'upload', label: 'Studio', icon: Upload, description: 'Create and edit your stories' },
     { key: 'posts', label: 'Posts', icon: FileText, description: 'View your published entries' },
-    { key: 'documentation', label: 'Docs', icon: BookOpen, description: 'Guides and API references' },
     { key: 'settings', label: 'Settings', icon: Settings, description: 'Configure application settings' },
   ] as const
 
@@ -209,41 +242,6 @@ export default function App() {
                   />
                 )
 
-                if (item.key === 'documentation') {
-                  return (
-                    <NavigationMenuItem key={item.key}>
-                      <NavigationMenuTrigger className={baseLinkClass + " bg-transparent data-[state=open]:text-white"}>
-                        {activeIndicator}
-                        {content}
-                      </NavigationMenuTrigger>
-                      <NavigationMenuContent>
-                        <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] bg-[var(--color-rich-black)] border border-[var(--color-eerie-black)] rounded-2xl shadow-2xl">
-
-                          {[
-                            { title: "Quickstart", icon: Zap, desc: "Get up and running in under 2 minutes." },
-                            { title: "Security", icon: Shield, desc: "How we protect your creative intellectual property." },
-                            { title: "Support", icon: HelpCircle, desc: "24/7 dedicated assistance for all creators." }
-                          ].map((subItem) => (
-                            <li key={subItem.title}>
-                              <NavigationMenuLink asChild>
-                                <a className="block select-none space-y-1 rounded-xl p-3 leading-none no-underline outline-none transition-colors hover:bg-[var(--color-onyx)]/30 hover:text-accent-foreground">
-                                  <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                                    <subItem.icon className="w-3.5 h-3.5 text-[var(--color-dim-gray)]" />
-                                    {subItem.title}
-                                  </div>
-                                  <p className="line-clamp-2 text-xs leading-snug text-[var(--color-dim-gray)] mt-1">
-                                    {subItem.desc}
-                                  </p>
-                                </a>
-                              </NavigationMenuLink>
-                            </li>
-                          ))}
-                        </ul>
-                      </NavigationMenuContent>
-                    </NavigationMenuItem>
-                  )
-                }
-
                 return (
                   <NavigationMenuItem key={item.key}>
                     <NavigationMenuLink
@@ -258,15 +256,10 @@ export default function App() {
               })}
             </NavigationMenuList>
           </NavigationMenu>
-
-          {/* Action Button (Optional Placeholder for Profile/Settings) */}
-
-
         </div>
       </header>
 
       {/* Main Content Area */}
-
       <main className="flex-1 w-full px-6 pt-24 pb-6 flex flex-col min-h-0">
         <AnimatePresence mode="wait">
           
@@ -286,12 +279,23 @@ export default function App() {
                   onSubmit={(e) => { e.preventDefault(); openPublishModal(); }}
                   className="flex-1 flex flex-col bg-[var(--color-rich-black)] rounded-2xl border border-[var(--color-eerie-black)] p-6 space-y-4 min-h-0"
                 >
-                  <textarea
-                    placeholder="Write your story in Markdown..."
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className="flex-1 w-full bg-transparent text-lg text-white placeholder-[var(--color-dim-gray)] focus:outline-none resize-none leading-relaxed font-mono min-h-0 overflow-y-auto"
-                  />
+                    <textarea
+                      placeholder="Write your story in Markdown..."
+                      value={content}
+                      ref={editorRef}
+                      onKeyDown={(e) => {
+                        if (e.ctrlKey && e.key === 'k') {
+                          e.preventDefault()
+                          insertText('[ ]( )', 1)
+                        }
+                        if (e.ctrlKey && e.shiftKey && e.key === 'I') {
+                          e.preventDefault()
+                          insertText('![ ]( )', 2)
+                        }
+                      }}
+                      onChange={(e) => setContent(e.target.value)}
+                      className="flex-1 w-full bg-transparent text-lg text-white placeholder-[var(--color-dim-gray)] focus:outline-none resize-none leading-relaxed font-mono min-h-0 overflow-y-auto"
+                    />
                   
                   <div className="flex items-center justify-between pt-4 border-t border-[var(--color-eerie-black)] shrink-0">
                     <div className="text-sm text-[var(--color-dim-gray)] flex items-center gap-4">
@@ -407,34 +411,6 @@ export default function App() {
             </motion.div>
           )}
 
-          {activePage === 'documentation' && (
-            <motion.div
-              key="documentation"
-              variants={pageVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              className="max-w-3xl mx-auto"
-            >
-               <div className="mb-10">
-                <h2 className="text-3xl font-bold tracking-tight mb-4">Documentation</h2>
-                <p className="text-[var(--color-dim-gray)] text-lg">
-                  Learn how to leverage the full power of Vox Studio.
-                </p>
-              </div>
-
-              <div className="bg-[var(--color-jet-black)] border border-[var(--color-eerie-black)] rounded-3xl p-12 text-center relative overflow-hidden">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[var(--color-charcoal)]/20 blur-[100px] rounded-full pointer-events-none" />
-                
-                <BookOpen className="w-16 h-16 text-[var(--color-raisin-black)] mx-auto mb-6" />
-                <h3 className="text-xl font-medium mb-3">Documentation is arriving soon</h3>
-                <p className="text-[var(--color-dim-gray)] max-w-md mx-auto">
-                  We're currently writing comprehensive guides and API references. Check back soon for updates.
-                </p>
-              </div>
-            </motion.div>
-          )}
-
           {activePage === 'settings' && (
             <motion.div
               key="settings"
@@ -501,7 +477,63 @@ export default function App() {
 
       {/* Publish Modal */}
       <AnimatePresence>
+        {isShortcutsOpen && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setIsShortcutsOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-[var(--color-jet-black)] border border-[var(--color-eerie-black)] rounded-3xl p-6 shadow-2xl overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-6 shrink-0">
+                <h3 className="text-xl font-bold text-white">Keyboard Shortcuts</h3>
+                <button
+                  type="button"
+                  onClick={() => setIsShortcutsOpen(false)}
+                  className="p-2 hover:bg-[var(--color-rich-black)] rounded-full transition-colors text-[var(--color-dim-gray)] hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {[
+                  { keys: 'Ctrl + .', action: 'Show/Hide Shortcuts' },
+                  { keys: 'Ctrl + S', action: 'Publish Post' },
+                  { keys: 'Ctrl + K', action: 'Insert Link' },
+                  { keys: 'Ctrl + Shift + I', action: 'Insert Image' },
+                  { keys: 'Ctrl + 1', action: 'Switch to Studio' },
+                  { keys: 'Ctrl + 2', action: 'Switch to Posts' },
+                  { keys: 'Ctrl + 3', action: 'Switch to Settings' },
+                  { keys: 'Esc', action: 'Close Modal' },
+                ].map((shortcut) => (
+                  <div key={shortcut.keys} className="flex items-center justify-between p-3 rounded-xl bg-[var(--color-rich-black)] border border-[var(--color-eerie-black)] group hover:border-[var(--color-charcoal)] transition-colors">
+                    <span className="text-sm text-[var(--color-dim-gray)] group-hover:text-white transition-colors">{shortcut.action}</span>
+                    <kbd className="px-2 py-1 text-xs font-mono bg-[var(--color-onyx)] text-white border border-[var(--color-charcoal)] rounded-md shadow-sm">
+                      {shortcut.keys}
+                    </kbd>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-6 text-center">
+                <p className="text-xs text-[var(--color-dim-gray)]">Press <kbd className="px-1 py-0.5 bg-[var(--color-onyx)] rounded">Esc</kbd> to close</p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {isPublishModalOpen && (
+
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
             <motion.div
               initial={{ opacity: 0 }}
