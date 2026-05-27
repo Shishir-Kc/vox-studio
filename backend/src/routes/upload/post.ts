@@ -25,9 +25,6 @@ app.post("/post", zValidator('json', upload_post_schema), async (c) => {
     }), 401)
   }
 
-
-
-
   try {
     const data = c.req.valid('json');
     const db = createdb(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE);
