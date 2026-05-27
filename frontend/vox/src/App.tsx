@@ -111,10 +111,6 @@ export default function App() {
       const url = getApiUrl('/vox/posts')
       const headers: Record<string, string> = {}
       
-      if (apiKey) {
-        headers['X-API-KEY'] = apiKey
-      }
-
       const response = await fetch(url, { headers })
       
       if (!response.ok) {
