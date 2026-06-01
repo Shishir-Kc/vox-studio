@@ -2,6 +2,7 @@ import { Hono } from "hono"
 import { get_all_posts } from "../../repositories/read/post.read";
 import { createdb } from "../../lib/db";
 
+
 type Bindings = {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE: string
